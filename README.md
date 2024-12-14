@@ -1,5 +1,3 @@
-    
-
 # **文本转语音虚拟麦克风 Tttsvm (Tttsvm is Text to Speech Virtual Microphone)**
 
 [![GitHub license](https://img.shields.io/github/license/GDNDZZK/keyboardControlMouse.svg)](https://github.com/GDNDZZK/keyboardControlMouse/blob/master/LICENSE) ![Python版本](https://img.shields.io/badge/python-3.8%2B-yellow)
@@ -47,7 +45,7 @@
 ## 自定义设置
 
 1. 在 `config.ini`文件中,你可以自定义快捷键设置与输出设备名称
-2. 可以播放自定义文件(仅支持wav格式),例如你想在输入 `input`后播放 `demo.wav`,你可以将 `demo.wav`改名为 `input.wav`后放入 `local`目录中
+2. 可以播放自定义文件(仅支持wav(PCM_16)格式),例如你想在输入 `input`后播放 `demo.wav`,你可以将 `demo.wav`改名为 `input.wav`后放入 `local`目录中
 
 ## 使用到的库
 
@@ -58,6 +56,7 @@
 - [pyttsx3](https://github.com/nateshmbhat/pyttsx3):用于语音合成
 - [numpy](https://github.com/numpy/numpy):用于快速计算
 - [pyperclip](https://github.com/asweigart/pyperclip):用于读取剪贴板
+- [requests](https://github.com/psf/requests):用于调用ttsapi
 
 ## 开发者
 

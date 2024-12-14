@@ -5,3 +5,4 @@ sounddevice
 numpy
 pyttsx3
 pyperclip
+requests

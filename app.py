@@ -18,7 +18,7 @@ print('读取音频设备')
 device_dict: Dict[str, int] = ap.get_audio_devices()
 
 def core():
-    global device_id, volume,ap
+    global device_id, volume, ap, tts_engine
     print(device_id)
     # 读取剪贴板
     text = pyperclip.paste()
@@ -28,11 +28,14 @@ def core():
     if os.path.exists(f'./local/{text}.wav'):
         print(f'查询到{text}.wav')
         ap.play_audio_on_device(f'./local/{text}.wav', device_id, volume)
+        print('播放完成')
     else:
         print(f'未查询到{text}.wav')
         # 合成
-        path = tts_if_not_exists(text, './temp')
+        path = tts_if_not_exists(text, './temp', tts_engine)
+        print(f'音频合成{path}')
         ap.play_audio_on_device(path, device_id, volume)
+        print('播放完成')
 
 def core_async():
     threading.Thread(target=core, daemon=True).start()
@@ -77,7 +80,7 @@ def registerGlobalHotKey():
 if __name__ == '__main__':
     # 确保工作路径正确
     checkPath()
-    global setting_dict, global_hot_key, device_id, volume
+    global setting_dict, global_hot_key, device_id, volume, tts_engine
     # 读取设置
     setting_dict = getConfigDict()
     # 注册全局热键
@@ -91,6 +94,7 @@ if __name__ == '__main__':
         raise ValueError(
             f"指定设备:{setting_dict['DEVICE']}不存在,当前设备列表:{device_dict.keys()}")
     device_id = device_dict[setting_dict['DEVICE']]
+    tts_engine = setting_dict['TTS_ENGINE']
     # 托盘图标
     sys_icon = SystemTrayIcon()
     # 开启图标,阻塞主线程
