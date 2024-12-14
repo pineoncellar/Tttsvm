@@ -1,0 +1,7 @@
+pynput
+pystray
+Pillow
+sounddevice
+numpy
+pyttsx3
+pyperclip
