@@ -5,6 +5,8 @@ import threading
 import pyttsx3
 import requests
 
+do_not_use_cache = True
+
 def pyttsx3_tts(text, filepath):
     # 文件不存在，使用pyttsx3合成wav文件
     engine = pyttsx3.init()
@@ -73,11 +75,16 @@ def api_tts(text, filepath, language="ZH"):
 
 
 def tts_if_not_exists(text, directory, tts_engine = 'pyttsx3_tts'):
+    global do_not_use_cache
     # 计算字符串的MD5值
     md5_hash = hashlib.md5(text.encode()).hexdigest()
     filename = f"{md5_hash}.wav"
     filepath = os.path.join(directory, filename)
     # 检查文件是否存在于指定目录中
+    # 如果不使用缓存
+    if do_not_use_cache and os.path.exists(filepath):
+        # 删除文件
+        os.remove(filepath)
     if not os.path.exists(filepath):
         if tts_engine == 'pyttsx3_tts':
             result = pyttsx3_tts(text, filepath)
