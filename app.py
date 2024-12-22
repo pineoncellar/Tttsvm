@@ -1,5 +1,5 @@
 import threading
-import wave
+import time
 import os
 import sys
 from typing import Dict
@@ -21,6 +21,8 @@ def core():
     global device_id, volume, ap, tts_engine
     print(device_id)
     # 读取剪贴板
+    if setting_dict['ACTIVATION'] == "<ctrl>+x":
+        time.sleep(0.01)
     text = pyperclip.paste()
     print(f'读取剪贴板:{text}')
     # play_wav('./temp/test_converted.wav', device_id, volume)
