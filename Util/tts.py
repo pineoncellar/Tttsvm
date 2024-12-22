@@ -2,6 +2,7 @@ import json
 import os
 import hashlib
 import threading
+import time
 import pyttsx3
 import requests
 
@@ -84,7 +85,12 @@ def tts_if_not_exists(text, directory, tts_engine = 'pyttsx3_tts'):
     # 如果不使用缓存
     if do_not_use_cache and os.path.exists(filepath):
         # 删除文件
-        os.remove(filepath)
+        try:
+            os.remove(filepath)
+        # 如果文件被占用，则等待一段时间后再次尝试
+        except PermissionError:
+            time.sleep(0.1)
+            return tts_if_not_exists(text, directory, tts_engine)
     if not os.path.exists(filepath):
         if tts_engine == 'pyttsx3_tts':
             result = pyttsx3_tts(text, filepath)
