@@ -4,6 +4,7 @@ import wave
 import numpy as np
 import sounddevice as sd
 
+
 class AudioPlayer:
     def __init__(self):
         self.play_Lock = threading.Lock()
@@ -31,48 +32,54 @@ class AudioPlayer:
 
     def play_audio_on_device(self, file_path, device_id, volume):
         """ 播放指定文件路径的音频到指定的设备 """
-        # 打开WAV文件
-        with wave.open(file_path, 'rb') as wf:
-            # 读取音频参数
-            channels = wf.getnchannels()
-            width = wf.getsampwidth()
-            frame_rate = wf.getframerate()
-            frames = wf.readframes(wf.getnframes())
+        try:
+            # 打开WAV文件
+            with wave.open(file_path, 'rb') as wf:
+                # 读取音频参数
+                channels = wf.getnchannels()
+                width = wf.getsampwidth()
+                frame_rate = wf.getframerate()
+                frames = wf.readframes(wf.getnframes())
 
-            # 将字节数据转换为numpy数组
-            audio_data = np.frombuffer(frames, dtype=np.int16)
+                # 将字节数据转换为numpy数组
+                audio_data = np.frombuffer(frames, dtype=np.int16)
 
-            # 调整音量
-            audio_data = audio_data * volume
-            # 格式转换
-            audio_data = audio_data.astype(np.int16)
-            # 播放音频
-            self.frame_rate = frame_rate
-            self.channels = channels
-            self.stop_null()
-            self.play(audio_data, samplerate=frame_rate,
-                    device=device_id, mapping=[1, 2])
+                # 调整音量
+                audio_data = audio_data * volume
+                # 格式转换
+                audio_data = audio_data.astype(np.int16)
+                # 播放音频
+                self.frame_rate = frame_rate
+                self.channels = channels
+                self.stop_null()
+                self.play(audio_data, samplerate=frame_rate,
+                          device=device_id, mapping=[1, 2])
 
-            # 音频播放完成后播放空电平信号
-            self.null_thread_stop_event = threading.Event()  # 用于终止线程的事件
-            self.play_null(device_id)
+                # 音频播放完成后播放空电平信号
+                self.null_thread_stop_event = threading.Event()  # 用于终止线程的事件
+                self.play_null(device_id)
+        except Exception as e:
+            print(f"Error playing audio on device {device_id}: {e}")
 
     def play_null(self, device_id):
         """ 输出空电平重置设备 """
         if not self.playing_null:
             self.playing_null = True
+
             def null_thread_func():
                 for _ in range(100):
                     if self.null_thread_stop_event.is_set():  # 检查是否需要终止线程
                         self.playing_null = False
                         return
                     duration = 0.1  # 秒
-                    silence_frames = int(duration * self.frame_rate * self.channels)
+                    silence_frames = int(
+                        duration * self.frame_rate * self.channels)
                     silence_data = np.zeros(silence_frames, dtype=np.int16)
                     # 播放空电平信号
-                    self.play(silence_data, samplerate=self.frame_rate, device=device_id, mapping=[1, 2])
+                    self.play(silence_data, samplerate=self.frame_rate,
+                              device=device_id, mapping=[1, 2])
                 self.playing_null = False
-                print('空电平输出完成',flush=True)
+                print('空电平输出完成', flush=True)
 
             # 启动空电平信号播放线程
             self.null_thread = threading.Thread(target=null_thread_func)

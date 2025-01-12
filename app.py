@@ -22,7 +22,7 @@ def core():
     print(device_id)
     # 读取剪贴板
     if setting_dict['ACTIVATION'] == "<ctrl>+x":
-        time.sleep(0.01)
+        time.sleep(0.1)
     text = pyperclip.paste()
     print(f'读取剪贴板:{text}')
     # play_wav('./temp/test_converted.wav', device_id, volume)
