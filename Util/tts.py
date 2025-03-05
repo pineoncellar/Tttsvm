@@ -10,7 +10,17 @@ do_not_use_cache = True
 
 def pyttsx3_tts(text, filepath):
     # 文件不存在，使用pyttsx3合成wav文件
-    engine = pyttsx3.init()
+    try:
+        engine = pyttsx3.init('sapi5')
+    except:
+        try:
+            engine = pyttsx3.init()
+        except:
+            try:
+                engine = pyttsx3.init('nsss')
+            except:
+                print("WARN: No TTS engine found")
+                engine = pyttsx3.init('dummy')
     # 设置输出到文件
     engine.save_to_file(text, filepath)
     # 执行TTS
