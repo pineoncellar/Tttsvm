@@ -84,13 +84,49 @@ def api_tts(text, filepath, language="ZH"):
     result = send_request("http://127.0.0.1:10086/",'POST',body={"text": text, "language": language, 'file_path' : os.path.abspath(filepath), 'file_type' : 'wav'})
     return result
 
+def fish_audio_tts(text, filepath, language="ZH"):
+    """Fish Audio TTS API 调用"""
+    try:
+        # 调用本地 Fish Audio API 服务器
+        result = send_request(
+            "http://127.0.0.1:10087/", 
+            'POST',
+            body={
+                "text": text, 
+                "language": language, 
+                'file_path': os.path.abspath(filepath), 
+                'file_type': 'wav'  # 改为 wav 格式以兼容音频播放器
+            },
+            headers={'Content-Type': 'application/json'}
+        )
+        
+        # 解析响应
+        import json
+        response_data = json.loads(result)
+        
+        if response_data.get('success'):
+            return response_data.get('file_path', filepath)
+        else:
+            error_msg = response_data.get('error', '未知错误')
+            print(f"Fish Audio TTS 错误: {error_msg}")
+            return None
+            
+    except Exception as e:
+        print(f"Fish Audio TTS 调用失败: {e}")
+        return None
+
 
 def tts_if_not_exists(text, directory, tts_engine = 'pyttsx3_tts'):
     global do_not_use_cache
     # 计算字符串的MD5值
     md5_hash = hashlib.md5(text.encode()).hexdigest()
-    filename = f"{md5_hash}.wav"
+    
+    # 所有 TTS 引擎都使用 WAV 格式以确保兼容性
+    file_extension = 'wav'
+    
+    filename = f"{md5_hash}.{file_extension}"
     filepath = os.path.join(directory, filename)
+    
     # 检查文件是否存在于指定目录中
     # 如果不使用缓存
     if do_not_use_cache and os.path.exists(filepath):
@@ -101,13 +137,21 @@ def tts_if_not_exists(text, directory, tts_engine = 'pyttsx3_tts'):
         except PermissionError:
             time.sleep(0.1)
             return tts_if_not_exists(text, directory, tts_engine)
+    
     if not os.path.exists(filepath):
         if tts_engine == 'pyttsx3_tts':
             result = pyttsx3_tts(text, filepath)
         elif tts_engine == 'api_tts':
             result = api_tts(text, directory)
+        elif tts_engine == 'fish_audio_tts':
+            result = fish_audio_tts(text, filepath)
+            if result is None:
+                # Fish Audio 失败时回退到 pyttsx3
+                print("Fish Audio TTS 失败，回退到 pyttsx3")
+                result = pyttsx3_tts(text, filepath)
         else:
             raise ValueError("Invalid TTS engine specified.")
     else:
         result = filepath
+    
     return os.path.abspath(result)

@@ -6,3 +6,7 @@ numpy
 pyttsx3
 pyperclip
 requests
+websockets
+ormsgpack
+openai
+flask
