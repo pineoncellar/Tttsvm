@@ -1,8 +1,11 @@
 # configuration files
-config/config.ini
+config/*
 
 # tts result files
 temp/*
 
 # python cache files
 **/__pycache__**
+
+# python virtual environment
+.venv/
