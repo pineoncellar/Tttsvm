@@ -17,7 +17,7 @@ DEVICE=CABLE Input (VB-Audio Virtual Cable)
 ; - pyttsx3_tts: 系统内置 TTS（默认）
 ; - api_tts: 本地 API TTS（端口 10086）
 ; - fish_audio_tts: Fish Audio TTS（需要配置 API Key）
-TTS_ENGINE=fish_audio_tts
+TTS_ENGINE=pyttsx3_tts
 
 ; Fish Audio API 配置
 ; 请在 Fish Audio 网站上注册并获取 API Key
