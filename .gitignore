@@ -1,5 +1,5 @@
 # configuration files
-config/*
+config/config.ini
 
 # tts result files
 temp/*
