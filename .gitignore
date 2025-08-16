@@ -1,0 +1,6 @@
+# configuration files
+config/config.ini
+
+# tts result files
+temp/*
+
