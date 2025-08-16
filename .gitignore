@@ -4,3 +4,5 @@ config/config.ini
 # tts result files
 temp/*
 
+# python cache files
+**/__pycache__**

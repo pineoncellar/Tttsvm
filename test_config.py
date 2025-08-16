@@ -1,20 +1,5 @@
 # Fish Audio API 测试配置文件
-# 请在这里设置您的配置信息
-
-# Fish Audio API 配置
-FISH_API_KEY = "91b0867a9c5a4f46a8058d6cd142b6d2"  # 请替换为您的 Fish Audio API 密钥
-REFERENCE_ID = "3d1cb00d75184099992ddbaf0fdd7387"  # 请替换为您的参考音色ID
-
-# 测试配置
-TEST_SETTINGS = {
-    "model": "speech-1.5",  # 可选: speech-1.5, speech-1.6, s1
-    "latency": "normal",    # normal 或 balanced
-    "format": "opus",       # opus, mp3, 或 wav - 使用 opus 获得最佳质量
-    "temperature": 0.7,     # 控制语音生成的随机性 (0.0-1.0)
-    "top_p": 0.7,          # 控制多样性 (0.0-1.0)
-    "speed": 1.0,          # 语音速度 (0.5-2.0)
-    "volume": 0            # 音量调整 (dB)
-}
+# 配置项已迁移到 config/config.ini 文件中
 
 # 测试文本
 TEST_TEXTS = {
