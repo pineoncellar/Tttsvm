@@ -46,9 +46,20 @@ class FloatingTextInput:
         self.root.attributes('-alpha', 0.95)    # 半透明
         self.root.resizable(False, False)
         
-        # Windows特定设置：确保窗口总是在最前面
+        # Windows特定设置：确保窗口总是在最前面，即使在游戏中
         if WINDOWS_AVAILABLE:
             self.root.attributes('-toolwindow', True)  # 不在任务栏显示
+            # 设置窗口为系统模态，确保能覆盖全屏游戏
+            try:
+                hwnd = self.root.winfo_id()
+                # 设置窗口样式，使其能够覆盖全屏应用
+                ctypes.windll.user32.SetWindowPos(
+                    hwnd, -1,  # HWND_TOPMOST
+                    0, 0, 0, 0,
+                    0x0001 | 0x0002 | 0x0010  # SWP_NOSIZE | SWP_NOMOVE | SWP_NOACTIVATE
+                )
+            except:
+                pass
         
         # 设置窗口样式 - 深色主题，适合游戏环境
         self.root.configure(bg='#1e1e1e')
@@ -160,56 +171,136 @@ class FloatingTextInput:
         y = (self.root.winfo_screenheight() // 2) - (height // 2)
         self.root.geometry(f'{width}x{height}+{x}+{y}')
     
+    def is_fullscreen_app_active(self):
+        """检测当前是否有全屏应用（如游戏）在运行"""
+        if not WINDOWS_AVAILABLE:
+            return False
+            
+        try:
+            # 获取前台窗口
+            hwnd = ctypes.windll.user32.GetForegroundWindow()
+            if hwnd == 0:
+                return False
+                
+            # 获取窗口矩形
+            rect = ctypes.wintypes.RECT()
+            ctypes.windll.user32.GetWindowRect(hwnd, ctypes.byref(rect))
+            
+            # 获取屏幕尺寸
+            screen_width = ctypes.windll.user32.GetSystemMetrics(0)
+            screen_height = ctypes.windll.user32.GetSystemMetrics(1)
+            
+            # 检查窗口是否占据整个屏幕
+            window_width = rect.right - rect.left
+            window_height = rect.bottom - rect.top
+            
+            is_fullscreen = (window_width >= screen_width and 
+                           window_height >= screen_height and 
+                           rect.left <= 0 and rect.top <= 0)
+            
+            if is_fullscreen:
+                print("🎮 检测到全屏应用程序")
+            
+            return is_fullscreen
+        except:
+            return False
+    
     def force_focus(self):
         """强制窗口获得焦点"""
         try:
+            # 检测是否有全屏应用
+            is_game_mode = self.is_fullscreen_app_active()
+            
             # 确保窗口可见并置顶
             self.root.deiconify()
             self.root.lift()
             self.root.attributes('-topmost', True)
             
-            # Windows 特定的窗口激活
+            # Windows 特定的窗口激活 - 针对游戏环境增强
             if WINDOWS_AVAILABLE:
                 try:
                     # 获取窗口句柄
                     hwnd = self.root.winfo_id()
                     
-                    # 使用 Windows API 强制激活窗口
-                    ctypes.windll.user32.SetForegroundWindow(hwnd)
-                    ctypes.windll.user32.BringWindowToTop(hwnd)
-                    ctypes.windll.user32.SetActiveWindow(hwnd)
-                    
-                    # 如果上述方法失败，尝试使用 AttachThreadInput
-                    foreground_hwnd = ctypes.windll.user32.GetForegroundWindow()
-                    if foreground_hwnd != hwnd:
+                    if is_game_mode:
+                        print("🎮 游戏模式 - 使用强制激活策略")
+                        # 游戏模式：使用更激进的方法
+                        
+                        # 模拟 Alt+Tab 来打断游戏的焦点锁定
+                        ctypes.windll.user32.keybd_event(0x12, 0, 0, 0)  # Alt down
+                        time.sleep(0.02)
+                        ctypes.windll.user32.keybd_event(0x09, 0, 0, 0)  # Tab down
+                        time.sleep(0.02)
+                        ctypes.windll.user32.keybd_event(0x09, 0, 2, 0)  # Tab up
+                        time.sleep(0.02)
+                        
+                        # 强制设置我们的窗口为前台
+                        foreground_hwnd = ctypes.windll.user32.GetForegroundWindow()
                         foreground_thread = ctypes.windll.user32.GetWindowThreadProcessId(foreground_hwnd, None)
                         current_thread = ctypes.windll.kernel32.GetCurrentThreadId()
                         
                         if foreground_thread != current_thread:
                             ctypes.windll.user32.AttachThreadInput(current_thread, foreground_thread, True)
-                            ctypes.windll.user32.SetForegroundWindow(hwnd)
+                        
+                        ctypes.windll.user32.SetForegroundWindow(hwnd)
+                        ctypes.windll.user32.SetActiveWindow(hwnd)
+                        ctypes.windll.user32.BringWindowToTop(hwnd)
+                        
+                        if foreground_thread != current_thread:
                             ctypes.windll.user32.AttachThreadInput(current_thread, foreground_thread, False)
+                        
+                        ctypes.windll.user32.keybd_event(0x12, 0, 2, 0)  # Alt up
+                        
+                        # 强制窗口置顶
+                        ctypes.windll.user32.SetWindowPos(
+                            hwnd, -1,  # HWND_TOPMOST
+                            0, 0, 0, 0,
+                            0x0001 | 0x0002  # SWP_NOSIZE | SWP_NOMOVE
+                        )
+                    else:
+                        print("🖥️ 桌面模式 - 使用标准激活策略")
+                        # 桌面模式：使用标准方法
+                        ctypes.windll.user32.SetForegroundWindow(hwnd)
+                        ctypes.windll.user32.BringWindowToTop(hwnd)
+                        ctypes.windll.user32.SetActiveWindow(hwnd)
+                        
                 except Exception as e:
                     print(f"Windows API 窗口激活失败: {e}")
             
             # 强制激活窗口 (跨平台方法)
             self.root.focus_force()
             
+            if is_game_mode:
+                # 游戏模式下使用模态抢夺
+                self.root.grab_set()  # 模态窗口，抢夺所有输入
+                print("启用模态输入抢夺")
+            
             # 延迟设置输入框焦点，确保窗口完全加载
             def set_entry_focus():
                 try:
-                    if self.entry:
+                    if self.entry and self.root:
                         self.entry.focus_set()
                         self.entry.icursor(tk.END)  # 将光标移到输入框末尾
                         # 选中所有现有文本（如果有的话）
                         self.entry.select_range(0, tk.END)
-                except:
-                    pass
+                        # print("输入框焦点设置成功")
+                except Exception as e:
+                    print(f"设置输入框焦点失败: {e}")
             
-            # 多次尝试设置焦点，确保成功
-            self.root.after(50, set_entry_focus)
-            self.root.after(150, set_entry_focus)
-            self.root.after(300, set_entry_focus)
+            # 根据模式调整重试时间
+            if is_game_mode:
+                # 游戏模式需要更多时间来抢夺焦点
+                self.root.after(10, set_entry_focus)
+                self.root.after(50, set_entry_focus)
+                self.root.after(100, set_entry_focus)
+                self.root.after(200, set_entry_focus)
+                self.root.after(400, set_entry_focus)
+                self.root.after(800, set_entry_focus)
+            else:
+                # 桌面模式可以更快设置焦点
+                self.root.after(10, set_entry_focus)
+                self.root.after(50, set_entry_focus)
+                self.root.after(150, set_entry_focus)
             
         except Exception as e:
             print(f"设置窗口焦点时出错: {e}")
@@ -233,22 +324,28 @@ class FloatingTextInput:
         
     def show(self):
         """显示悬浮窗"""
+        print("尝试显示悬浮输入窗口...")
+        
         if self.is_visible:
             # 如果窗口已经显示，重新获得焦点
+            print("窗口已存在，重新获取焦点...")
             if self.root and self.entry:
                 self.force_focus()
             return
             
         self.is_visible = True
+        print("开始创建新的悬浮窗口...")
         
         # 临时禁用全局热键，避免冲突
         if self.hotkey_manager:
             self.hotkey_manager.pause()
+            print("全局热键已暂停")
         
         # 在新线程中创建并显示窗口
         def run_window():
             try:
                 self.create_window()
+                print("悬浮窗口创建完成，正在设置焦点...")
                 # 确保窗口在创建后获得焦点
                 self.root.after(10, self.force_focus)
                 self.root.mainloop()
@@ -272,14 +369,24 @@ class FloatingTextInput:
         
         if self.root:
             try:
+                # 释放模态抢夺（如果有的话）
+                try:
+                    self.root.grab_release()
+                    print("释放模态输入抢夺")
+                except:
+                    pass
+                
                 # 隐藏窗口前先取消置顶属性，让系统自然恢复焦点
                 self.root.attributes('-topmost', False)
-                time.sleep(0.05)  # 短暂延迟让系统处理
+                
+                # 给系统一点时间来处理焦点转换
+                time.sleep(0.1)
                 
                 self.root.quit()
                 self.root.destroy()
-            except:
-                pass
+                print("悬浮窗已关闭，焦点应已返回游戏")
+            except Exception as e:
+                print(f"关闭悬浮窗时出错: {e}")
             self.root = None
             self.entry = None
             
