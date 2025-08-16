@@ -8,14 +8,16 @@ from typing import Dict
 import pyperclip
 
 from Util.AudioPlayer import AudioPlayer
-from Util.globalHotKeyManager import GlobalHotKeyManager
+from Util.EnhancedHotKeyManager import EnhancedGlobalHotKeyManager
 from Util.loadSetting import getConfigDict
 from Util.SystemTrayIcon import SystemTrayIcon
 from Util.tts import tts_if_not_exists
+from Util.FloatingTextInput import FloatingTextInput
+from Util.admin_utils import is_admin
 
 # 导入 Fish Audio 服务器
 try:
-    from fish_audio_server import start_fish_audio_server, stop_fish_audio_server
+    from Util.fish_audio_server import start_fish_audio_server, stop_fish_audio_server
     FISH_AUDIO_AVAILABLE = True
 except ImportError:
     FISH_AUDIO_AVAILABLE = False
@@ -35,6 +37,11 @@ def core():
         time.sleep(0.1)
     text = pyperclip.paste()
     print(f'读取剪贴板:{text}')
+    process_text_to_speech(text)
+
+def process_text_to_speech(text):
+    """处理文本转语音的核心逻辑"""
+    global device_id, volume, ap, tts_engine
     # play_wav('./temp/test_converted.wav', device_id, volume)
     # 查询{text}.wav是否在local目录下出现
     if os.path.exists(f'./local/{text}.wav'):
@@ -51,6 +58,17 @@ def core():
 
 def core_async():
     threading.Thread(target=core, daemon=True).start()
+
+def floating_input_callback(text):
+    """悬浮窗输入回调函数"""
+    print(f'悬浮窗输入:{text}')
+    threading.Thread(target=lambda: process_text_to_speech(text), daemon=True).start()
+
+def show_floating_input():
+    """显示悬浮输入窗口"""
+    global floating_input
+    if not floating_input.is_showing():
+        floating_input.show()
 
 def checkPath():
     """确保工作路径正确"""
@@ -85,8 +103,14 @@ def registerGlobalHotKey():
     global global_hot_key, setting_dict
     # 获取分隔符
     sep = setting_dict['AND']
+    # 注册剪贴板读取热键
     keys = set(setting_dict['ACTIVATION'].split(sep))
     global_hot_key.register(keys, core_async)
+    
+    # 注册悬浮窗热键
+    if 'FLOATING_INPUT' in setting_dict:
+        floating_keys = set(setting_dict['FLOATING_INPUT'].split(sep))
+        global_hot_key.register(floating_keys, show_floating_input)
 
 def start_fish_audio_service():
     """启动 Fish Audio 服务"""
@@ -124,6 +148,8 @@ def cleanup_and_exit():
     print("\n正在清理资源...")
     try:
         stop_fish_audio_service()
+        if 'floating_input' in globals() and floating_input:
+            floating_input.hide()
         if 'global_hot_key' in globals() and global_hot_key:
             global_hot_key.delete()
         if 'sys_icon' in globals() and sys_icon:
@@ -167,13 +193,17 @@ if __name__ == '__main__':
     signal.signal(signal.SIGTERM, signal_handler)  # 终止信号
     
     try:
+        # 检查管理员权限
+        admin_status = "✅ 管理员权限" if is_admin() else "⚠️ 普通权限"
+        print(f"权限状态: {admin_status}")
+        
         # 确保工作路径正确
         checkPath()
-        global setting_dict, global_hot_key, device_id, volume, tts_engine, sys_icon
+        global setting_dict, global_hot_key, device_id, volume, tts_engine, sys_icon, floating_input
         # 读取设置
         setting_dict = getConfigDict()
         # 注册全局热键
-        global_hot_key = GlobalHotKeyManager()
+        global_hot_key = EnhancedGlobalHotKeyManager()
         registerGlobalHotKey()
         global_hot_key.start()
         volume = float(setting_dict['VOLUME'])
@@ -185,10 +215,16 @@ if __name__ == '__main__':
         device_id = device_dict[setting_dict['DEVICE']]
         tts_engine = setting_dict['TTS_ENGINE']
         
+        # 初始化悬浮输入窗口
+        floating_input = FloatingTextInput(floating_input_callback, global_hot_key)
+        
         # 启动 Fish Audio 服务（如果需要）
         start_fish_audio_service()
         
         print("程序已启动，按 Ctrl+C 或 Ctrl+Break 退出")
+        print(f"剪贴板读取热键: {setting_dict['ACTIVATION']}")
+        if 'FLOATING_INPUT' in setting_dict:
+            print(f"悬浮窗输入热键: {setting_dict['FLOATING_INPUT']}")
         
         # 创建托盘图标，传递清理回调函数
         sys_icon = SystemTrayIcon(cleanup_callback=cleanup_and_exit)
